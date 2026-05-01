@@ -948,7 +948,7 @@ renderList();
 // Register a minimal service worker for offline support
 if ('serviceWorker' in navigator) {
   const sw = `
-    const CACHE = 'shop-v1';
+    const CACHE = 'shop-v2';
     const ASSETS = ['./', './manifest.json', './icon.svg',
       'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&family=DM+Mono:wght@400;500&display=swap'];
     self.addEventListener('install', e => e.waitUntil(
