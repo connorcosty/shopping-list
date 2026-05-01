@@ -435,7 +435,95 @@
   .sheet-btn.red { color: var(--danger); }
   .sheet-btn.centre { text-align: center; color: var(--muted); }
 
-  /* ── EMPTY ────────────────────────────────────── */
+  .pan-empty-custom {
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--dim);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-style: italic;
+  }
+
+  .del-btn {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--danger);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    line-height: 1;
+  }
+
+  .del-btn:active { background: var(--surface2); }
+
+  /* ── ADD ITEM FORM ────────────────────────────── */
+  .add-item-form {
+    padding: 18px;
+    background: var(--surface);
+    border-top: 2px solid var(--accent-light);
+    margin-top: 6px;
+  }
+
+  .add-form-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .add-item-form input,
+  .add-item-form select {
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    -webkit-appearance: none;
+    margin-bottom: 10px;
+  }
+
+  .add-item-form input:focus,
+  .add-item-form select:focus { border-color: var(--accent-mid); }
+
+  .add-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .add-row input,
+  .add-row select { margin-bottom: 0; }
+
+  .add-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 11px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .add-btn:active { opacity: 0.8; }
   .empty {
     padding: 60px 30px;
     text-align: center;
@@ -572,13 +660,28 @@ function toggle(arr, id) {
   return arr;
 }
 
+// ── CUSTOM ITEMS ──────────────────────────────────────────────────────────────
+
+function getCustomItems() { const s = load(); return s.customItems || []; }
+function setCustomItems(arr) { const s = load(); s.customItems = arr; save(s); }
+
+function addCustomItem(name, qty, cat) {
+  const items = getCustomItems();
+  const id = 'c_' + Date.now();
+  items.push({ id, name: name.trim(), qty: qty.trim() || '—', cat });
+  setCustomItems(items);
+  return id;
+}
+
+function allItems() { return [...ALL, ...getCustomItems()]; }
+
 // ── DERIVED ───────────────────────────────────────────────────────────────────
 
 let filterQ = '';
 
 function visible() {
   const rm = removed(), pan = pantry();
-  return ALL.filter(item =>
+  return allItems().filter(item =>
     !rm.includes(item.id) &&
     !pan.includes(item.id) &&
     (filterQ === '' || item.name.toLowerCase().includes(filterQ.toLowerCase()))
@@ -625,12 +728,12 @@ function renderList() {
     </div>`;
 
     for (const item of items) {
-      const isDone    = chk.includes(item.id);
-      const inPantry  = pan.includes(item.id);
-      const cls       = isDone ? 'done' : (inPantry ? 'pantry-stocked' : '');
-      const cbContent = isDone ? '✓' : (inPantry ? '🏠' : '');
+      const isDone   = chk.includes(item.id);
+      const inPantry = pan.includes(item.id);
+      const cls      = isDone ? 'done' : (inPantry ? 'pantry-stocked' : '');
+      const cbTxt    = isDone ? '✓' : (inPantry ? '🏠' : '');
       html += `<div class="item ${cls}" ontouchend="tapItem(event,'${item.id}')" onclick="tapItem(event,'${item.id}')">
-        <div class="cb">${cbContent}</div>
+        <div class="cb">${cbTxt}</div>
         <span class="item-name">${item.name}</span>
         <span class="item-qty">${item.qty}</span>
       </div>`;
@@ -638,7 +741,6 @@ function renderList() {
   }
 
   area.innerHTML = html;
-
   const total = vis.length;
   const done  = vis.filter(i => chk.includes(i.id)).length;
   setProgress(done, total);
@@ -653,13 +755,17 @@ function setProgress(done, total) {
 // ── RENDER PANTRY ─────────────────────────────────────────────────────────────
 
 function renderPantry() {
-  const area = document.getElementById('scrollArea');
-  const pan  = pantry();
-  let lastCat = null, html = `<div class="pan-intro">
+  const area    = document.getElementById('scrollArea');
+  const pan     = pantry();
+  const customs = getCustomItems();
+  let lastCat   = null;
+
+  let html = `<div class="pan-intro">
     <h2>Your Pantry</h2>
-    <p>Toggle items you already have. They disappear from your shopping list automatically.</p>
+    <p>Toggle items you already have at home — they disappear from your shopping list. Add anything extra below.</p>
   </div>`;
 
+  // ── Standard items ──
   for (const item of ALL) {
     if (item.cat !== lastCat) {
       const m = CATS[item.cat];
@@ -674,28 +780,93 @@ function renderPantry() {
     </div>`;
   }
 
+  // ── Custom items ──
+  html += `<div class="cat-lbl">✏️ My Items<span>${customs.length}</span></div>`;
+
+  if (customs.length === 0) {
+    html += `<div class="pan-empty-custom">No custom items yet — add one below.</div>`;
+  } else {
+    for (const item of customs) {
+      const on = pan.includes(item.id);
+      html += `<div class="pan-item ${on ? 'on' : ''}" ontouchend="tapPantry(event,'${item.id}')" onclick="tapPantry(event,'${item.id}')">
+        <div class="toggle"></div>
+        <span class="pan-name">${item.name}</span>
+        <span class="pan-qty">${item.qty}</span>
+        <button class="del-btn" ontouchend="tapDeleteCustom(event,'${item.id}')" onclick="tapDeleteCustom(event,'${item.id}')">✕</button>
+      </div>`;
+    }
+  }
+
+  // ── Add item form ──
+  html += `<div class="add-item-form">
+    <div class="add-form-title">+ Add Item</div>
+    <input id="addName" type="text" placeholder="Item name" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="add-row">
+      <input id="addQty" type="text" placeholder="Qty (e.g. 1 jar)" autocomplete="off">
+      <select id="addCat">
+        <option value="protein">🥩 Protein</option>
+        <option value="carbs">🌾 Carbs</option>
+        <option value="veg">🥦 Veg</option>
+        <option value="fats" selected>🫙 Fats & Extras</option>
+      </select>
+    </div>
+    <button class="add-btn" onclick="submitAddItem()">Add to Pantry & List</button>
+  </div>`;
+
   area.innerHTML = html;
 }
 
-// ── TAP HANDLERS ──────────────────────────────────────────────────────────────
+function submitAddItem() {
+  const nameEl = document.getElementById('addName');
+  const qtyEl  = document.getElementById('addQty');
+  const catEl  = document.getElementById('addCat');
+  const name   = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  addCustomItem(name, qtyEl.value, catEl.value);
+  renderPantry();
+  // scroll to bottom so user sees new item
+  document.getElementById('scrollArea').scrollTo({ top: 99999, behavior: 'smooth' });
+}
 
-let lastTap = 0;
+// ── TAP HANDLERS (scroll-safe) ────────────────────────────────────────────────
+// We track touchstart position and only fire if the finger moved < 8px,
+// which means it was a tap not a scroll.
+
+let touchStartX = 0, touchStartY = 0, touchMoved = false;
+
+document.getElementById('scrollArea').addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchMoved  = false;
+}, { passive: true });
+
+document.getElementById('scrollArea').addEventListener('touchmove', () => {
+  touchMoved = true;
+}, { passive: true });
 
 function tapItem(e, id) {
+  if (touchMoved) return;
   e.preventDefault();
-  const now = Date.now();
-  if (now - lastTap < 300) return; // debounce
-  lastTap = now;
   setArr('checked', toggle(checked(), id));
   renderList();
 }
 
 function tapPantry(e, id) {
+  if (touchMoved) return;
   e.preventDefault();
-  const now = Date.now();
-  if (now - lastTap < 300) return;
-  lastTap = now;
   setArr('pantry', toggle(pantry(), id));
+  renderPantry();
+}
+
+function tapDeleteCustom(e, id) {
+  if (touchMoved) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const customs = getCustomItems().filter(i => i.id !== id);
+  setCustomItems(customs);
+  // also remove from pantry/checked if present
+  setArr('pantry',  getArr('pantry').filter(x => x !== id));
+  setArr('checked', getArr('checked').filter(x => x !== id));
   renderPantry();
 }
 
@@ -719,7 +890,7 @@ function clearPantry() {
 function resetList()  { setArr('checked', []); setArr('removed', []); renderList(); }
 
 function nukAll() {
-  if (!confirm('Clear ALL data including pantry?')) return;
+  if (!confirm('Clear ALL data including pantry and custom items?')) return;
   localStorage.removeItem(LS);
   renderList();
   renderPantry();
