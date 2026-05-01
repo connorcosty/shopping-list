@@ -1,0 +1,19 @@
+{
+  "name": "Weekly Shop — Connor",
+  "short_name": "Shop",
+  "description": "Weekly meal plan shopping list with pantry manager",
+  "start_url": "/shopping-list/",
+  "scope": "/shopping-list/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf8f3",
+  "theme_color": "#2d5a1b",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
